@@ -1,0 +1,13 @@
+{
+    "name": "hardhat",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "hardhat",
+    "workspaceFolder": "/app",
+    "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+    ],
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+    }
+}
