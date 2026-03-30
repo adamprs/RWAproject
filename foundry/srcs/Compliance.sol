@@ -72,9 +72,7 @@ contract Compliance is Initializable, OwnableUpgradeable
         if(!identityRegistry.isWhiteListed(_receiver)) revert ReceiverNotKyc(_receiver);
         if(realToken.balanceOf(_receiver) + _amount > getMaxSupplyPerUser()) revert ReceiverUpMaxSupply(_receiver);
         return true;
-        // gerer ou sont envoyer les tokens miner au depart, surement un wallet multisig (treasury).
         // gerer la revente des token d'un investisseurs vers la treasury.
-        // gerer comment transferer le ownership a une entité securiser (multisig).
         // gerer le burn (destruction/revente... d'un bien)
         // Implementer timelock
     }

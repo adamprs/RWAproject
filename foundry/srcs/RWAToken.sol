@@ -32,7 +32,7 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable
         __Ownable_init(msg.sender);
         __ERC20_init(name, symbol);
         setCompliance(_compliance);
-        _mint(treasury, _totalSupply);
+        _mint(treasury, _totalSupply); // treasury = multisig
     }
 
     function setCompliance(ICompliance newCompliance) public onlyOwner
@@ -40,6 +40,18 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable
         if(address(newCompliance) == address(0)) revert ZeroAddress();
         compliance = newCompliance;
         emit NewCompliance(address(compliance));
+    }
+
+    function burn(address treasury, uint256 value) external onlyOwner{
+        _burn(treasury, value);
+    }
+
+    function freeze() {
+
+    }
+
+    function forceTransfer() {
+        
     }
 
     function _update(address from, address to, uint256 value) internal override {
