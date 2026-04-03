@@ -19,6 +19,7 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, Pausab
 
     event NewCompliance(address _newCompliance);
     event NewIdentityRegistry(address _identityRegistry);
+    event ForcedTransferOfUser(address _user, uint256 value);
 
     error ComplianceNotSet();
     error BadCompliance(address from, address to, uint256 value);
@@ -68,10 +69,28 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, Pausab
         _unpause();
     }
 
-    function forceTransfer(address _from, address _to, uint256 value) external onlyOwner {
+    function forceTransfer(address _from, address _to, uint256 value) public onlyOwner {
         require(_from != address(0) && _to == treasury);
         require(balanceOf(_from) >= value);
         super._update(_from, _to, value);
+    }
+
+    function enforceMaxLimits() public onlyOwner {
+        address [] memory tokenHolders = identityRegistry.tokenHolders();
+        address user;
+        uint256 userBalance;
+        uint256 excess;
+        uint256 maxBalance = compliance.getMaxSupplyPerUser();
+        for (uint256 i = 0; i < tokenHolders.length; i++) {
+            user = tokenHolders[i];
+            userBalance = balanceOf(user);
+            if(userBalance > maxBalance)
+            {
+                excess = userBalance - maxBalance;
+                forceTransfer(user, treasury, excess);
+                emit ForcedTransferOfUser(user, excess);
+            }
+         }
     }
 
     function _update(address from, address to, uint256 value) internal override whenNotPaused {

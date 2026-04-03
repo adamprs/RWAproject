@@ -53,14 +53,13 @@ contract Compliance is Initializable, OwnableUpgradeable
         realToken = _realToken;
         emit RealTokenUpdated(address(_realToken));
     }
-             
+
     function setNewMaxOwnershipBPS(uint256 newMaxOwnershipBPS) public onlyOwner {
         if(newMaxOwnershipBPS > 10000) revert InvalidBPS(newMaxOwnershipBPS);
         if(newMaxOwnershipBPS == 0) revert InvalidBPS(newMaxOwnershipBPS);
          maxOwnershipBPS = newMaxOwnershipBPS;
         emit MaxOwnershipBPSUpdated(newMaxOwnershipBPS);
-        //checkUserBelowNewMaxOwnershipBPS()
-        // gerer le cas ou la limite a baisser et des utilisateurs ont trop de token; !
+        realToken.enforceMaxLimits();
     }
 
 

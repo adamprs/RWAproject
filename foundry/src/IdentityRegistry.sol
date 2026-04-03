@@ -123,7 +123,7 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
     {
         if(!hasToken[_user][_token])
         {
-            hasToken[_user][_token] == true;
+            hasToken[_user][_token] = true;
             userTokens[_user].push(_token);
         }
 
