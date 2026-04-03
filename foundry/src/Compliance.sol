@@ -65,8 +65,9 @@ contract Compliance is Initializable, OwnableUpgradeable
 
     function canTransfer(address _sender, address _receiver, uint256 _amount) public view returns (bool) 
     {
+        if(identityRegistry.isFreeze(_sender) || identityRegistry.isFreeze(_receiver)) return false;
         if(_sender == owner() && _receiver == address(0)) return true;
-        if(_sender == address(0) && _receiver == identityRegistry.treasury) return true;
+        if(_sender == address(0) && _receiver == identityRegistry.treasury()) return true;
         if( _receiver == address(0)) revert UnauthorizedBurn(_sender);
         if(!identityRegistry.isWhiteListed(_sender)) revert SenderNotKyc(_sender);
         if(!identityRegistry.isWhiteListed(_receiver)) revert ReceiverNotKyc(_receiver);

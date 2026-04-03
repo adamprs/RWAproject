@@ -17,6 +17,7 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
 
     mapping (address => Identity) public addressToIdentity;
     mapping (address => bool) public isWhiteListed;
+    mapping (address => bool) public isFreeze;
 
     address public treasury;
 
@@ -24,11 +25,14 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
     event UserRegistered(address indexed _user);
     event UserChangedIdentity(address indexed _user);
     event UserRevoked(address indexed _user);
+    event UserFreezed(address indexed _user);
+    event UserUnFreezed(address indexed _user);
 
     error ZeroAddress();
     error BadDocumentHash(); // ipfs
     error AlreadyRegistered();
     error UserNeverEnregistered(address _user);
+
 
     constructor() {
         _disableInitializers();
@@ -86,6 +90,20 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
     {
         isWhiteListed[_user] = false;
         emit UserRevoked(_user);
+    }
+
+    function freeze(address _user) external onlyOwner
+    {
+        isFreeze[_user] = true;
+        emit UserFreezed(_user);
+    }
+
+    function UnFreeze(address _user) external onlyOwner
+    {
+        if (isFreeze[_user] == true) {
+            isFreeze[_user] = false;
+            emit UserUnFreezed(_user);
+        }
     }
 
     function addToWhitelist(address _user) internal 
