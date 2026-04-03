@@ -12,6 +12,7 @@ contract Compliance is Initializable, OwnableUpgradeable
     IIdentityRegistry public identityRegistry;
     IRWAToken public realToken;
     uint256 public maxOwnershipBPS = 1000;
+    uint256 maxHolder;
 
     event IdentityRegistryUpdated(address indexed newIdentityRegistry);
     event RealTokenUpdated(address indexed newRealToken);
@@ -25,16 +26,18 @@ contract Compliance is Initializable, OwnableUpgradeable
     error UnauthorizedBurn(address _sender);
     error UnauthorizedUser();
     error UserFreezed(address _user);
+    error MaxHolder(address _user, address _token);
 
     constructor() 
     {
         _disableInitializers();
     }
 
-    function initialize(IIdentityRegistry _identityRegistry, IRWAToken _realToken) public initializer {
+    function initialize(IIdentityRegistry _identityRegistry, IRWAToken _realToken, uint256 _maxHolder) public initializer {
         __Ownable_init(msg.sender);
         setIdentityRegistry(_identityRegistry);
         setRealToken(_realToken);
+        setNewMaxHolder(_maxHolder);
     }
 
     function setIdentityRegistry(IIdentityRegistry _identityRegistry) public onlyOwner {
@@ -62,23 +65,24 @@ contract Compliance is Initializable, OwnableUpgradeable
         realToken.enforceMaxLimits();
     }
 
-
-    //Tracker le nombre d'investisseur sur un bien !
+    function setNewMaxHolder(uint256 _maxHolder) public onlyOwner {
+        maxHolder = _maxHolder;
+    }
 
     function canTransfer(address _sender, address _receiver, uint256 _amount) public view returns (bool) 
     {
+        IIdentityRegistry _identityRegistry = identityRegistry;
         if(_sender == owner() && _receiver == address(0)) return true;
-        if(_sender == address(0) && _receiver == identityRegistry.treasury()) return true;
+        if(_sender == address(0) && _receiver == _identityRegistry.treasury()) return true;
        // if (!(_sender == owner() || _receiver == owner() || msg.sender == address(marketplace))) revert UnauthorizedUser(); declarer marketplace
-        if(identityRegistry.isFreeze(_sender)) revert UserFreezed(_sender);
-        if(identityRegistry.isFreeze(_receiver)) revert UserFreezed(_receiver) ;
-        if(!identityRegistry.isWhiteListed(_sender)) revert SenderNotKyc(_sender);
-        if(!identityRegistry.isWhiteListed(_receiver)) revert ReceiverNotKyc(_receiver);
+        if(_identityRegistry.isFreeze(_sender)) revert UserFreezed(_sender);
+        if(_identityRegistry.isFreeze(_receiver)) revert UserFreezed(_receiver) ;
+        if(!_identityRegistry.isWhiteListed(_sender)) revert SenderNotKyc(_sender);
+        if(!_identityRegistry.isWhiteListed(_receiver)) revert ReceiverNotKyc(_receiver);
         if( _receiver == address(0)) revert UnauthorizedBurn(_sender);
+        if(_identityRegistry.tokenHolders().length > maxHolder) revert MaxHolder(_receiver, address(realToken));
         if(realToken.balanceOf(_receiver) + _amount > getMaxSupplyPerUser()) revert ReceiverUpMaxSupply(_receiver);
         return true;
-        // gerer la revente des token d'un investisseurs vers la treasury. marketplace
-        // gerer le burn (destruction/revente... d'un bien) !
         // Implementer timelock
     }
 }
