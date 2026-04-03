@@ -14,9 +14,11 @@ import "./Interfaces/ICompliance.sol";
 contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, PausableUpgradeable
 {
     ICompliance public compliance;
+    IIdentityRegistry public identityRegistry;
     address treasury;
 
     event NewCompliance(address _newCompliance);
+    event NewIdentityRegistry(address _identityRegistry);
 
     error ComplianceNotSet();
     error BadCompliance(address from, address to, uint256 value);
@@ -28,15 +30,23 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, Pausab
         _disableInitializers();
     }
 
-    function initialize(string memory name, string memory symbol, address _treasury, uint256 _totalSupply, ICompliance _compliance) public initializer
+    function initialize(string memory name, string memory symbol, address _treasury, uint256 _totalSupply, ICompliance _compliance, IIdentityRegistry _identityRegistry) public initializer
     {
         if (_treasury == address(0)) revert InvalidTreasuryAddress();
         __Ownable_init(msg.sender);
         __Pausable_init();
         __ERC20_init(name, symbol);
         setCompliance(_compliance);
+        setIdentityRegistry(_identityRegistry);
         treasury = _treasury;
         _mint(treasury, _totalSupply); // treasury = multisig
+    }
+
+    function setIdentityRegistry(IIdentityRegistry newIdentityRegistry) public onlyOwner
+    {
+        if(address(newIdentityRegistry) == address(0)) revert ZeroAddress();
+        identityRegistry = newIdentityRegistry;
+        emit NewIdentityRegistry(address(identityRegistry));
     }
 
     function setCompliance(ICompliance newCompliance) public onlyOwner
@@ -46,8 +56,8 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, Pausab
         emit NewCompliance(address(compliance));
     }
 
-    function burn(address treasury, uint256 value) external onlyOwner{
-        _burn(treasury, value);
+    function burn(address _treasury, uint256 value) external onlyOwner{
+        _burn(_treasury, value);
     }
 
     function pause() external  onlyOwner {
@@ -68,6 +78,7 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, Pausab
         if(address(compliance) == address (0)) revert ComplianceNotSet();
         if(!compliance.canTransfer(from, to, value)) revert BadCompliance(from, to, value);
         super._update(from,to,value);
+        identityRegistry.registerUsersTokens(to, address(this));
     }
 
 }

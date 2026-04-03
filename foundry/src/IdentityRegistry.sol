@@ -16,8 +16,15 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
     }
 
     mapping (address => Identity) public addressToIdentity;
+
     mapping (address => bool) public isWhiteListed;
     mapping (address => bool) public isFreeze;
+
+    mapping (address => address []) public userTokens;
+    mapping (address => mapping(address => bool)) hasToken;
+
+    address [] public tokenHolders;
+    mapping (address => bool) public isHolder;
 
     address public treasury;
 
@@ -112,6 +119,20 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
         emit UserWhiteListed(_user);
     }
 
-    // definir owner multisig et admin
+    function registerUsersTokens(address _user, address _token) internal 
+    {
+        if(!hasToken[_user][_token])
+        {
+            hasToken[_user][_token] == true;
+            userTokens[_user].push(_token);
+        }
+
+        if(!isHolder[_user])
+        {
+            tokenHolders.push(_user);
+            isHolder[_user] == true;
+        }
+    }
+
     // stocker sur ipfs
 }
