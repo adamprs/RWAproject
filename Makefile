@@ -7,7 +7,6 @@ all: clean remove install update build
 install: foundry slither aderyn surya
 
 foundry:
-	rm -rf foundry && \
 	mkdir foundry && \
 	cd foundry && \
 	forge init && \
