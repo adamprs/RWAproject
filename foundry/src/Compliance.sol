@@ -79,54 +79,30 @@ contract Compliance is Initializable, OwnableUpgradeable
         timelock = _timelock;
     }
 
-    function tokenTimelock(address _user, address _token, uint256 value) internal returns (bool)
+    function tokenTimelock(address _user, address _token, uint256 value) internal returns (bool) 
     {
-        BuyTime [] memory buyTime;
         IIdentityRegistry _identityRegistry = identityRegistry;
-        buyTime = _identityRegistry.getUsersBuy(_user, _token);
-        uint256 index = _identityRegistry.batchIndex(_user, _token);
-        uint256 count;
+        BuyTime[] memory buyTime = _identityRegistry.getUsersBuy(_user, _token);
+        uint256 i = _identityRegistry.batchIndex(_user, _token);
+        uint256 remaining = value;
 
-        if (value <= buyTime[index].tokenNum && block.timestamp >= buyTime[index].time + timelock)
-        {
-            if (value == buyTime[index].tokenNum)
-            {
-                    index++;
-                    _identityRegistry.setUsersBuyIndex(_user, _token, index);
-                    return true;
-            }
-            else 
-            {
-                _identityRegistry.setUsersBuyTokenNum(_user, _token, index, value);
-                return true;
-            }
-        }
+        while (remaining > 0 && i < buyTime.length){
 
-        if (value > buyTime[index].tokenNum && block.timestamp >= buyTime[index].time + timelock)
-        {
-            count = index;
-            while(value > buyTime[count].tokenNum && block.timestamp >= buyTime[index].time + timelock)
-            {
-                value -= buyTime[count].tokenNum;
-                count++;
-            }
-            if (value == buyTime[count].tokenNum)
-            {
-                count++;
-                _identityRegistry.setUsersBuyIndex(_user, _token, count);
-                return true;
-            }
-            else
-            {
-                if(buyTime[count].time - timelock >= 0)
-                    _identityRegistry.setUsersBuyTokenNum(_user, _token, count, value);
-                _identityRegistry.setUsersBuyIndex(_user, _token, count);
-                return true;
-            }
-            return false;
-        }
+            if (block.timestamp < buyTime[i].time + timelock)
+                return false;
 
-
+            if (buyTime[i].tokenNum <= remaining) 
+            {
+                remaining -= buyTime[i].tokenNum;
+                i++;
+            } else 
+            {
+            _identityRegistry.setUsersBuyTokenNum(_user, _token, i, buyTime[i].tokenNum - remaining);
+            remaining = 0;
+            }
+    }
+        _identityRegistry.setUsersBuyIndex(_user, _token, i);
+        return remaining == 0;
     }
 
     function canTransfer(address _sender, address _receiver, uint256 _amount) public view returns (bool) 
