@@ -97,7 +97,7 @@ contract RWAToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, Pausab
         if(address(compliance) == address (0)) revert ComplianceNotSet();
         if(!compliance.canTransfer(from, to, value)) revert BadCompliance(from, to, value);
         super._update(from,to,value);
-        identityRegistry.registerUsersTokens(to, address(this));
+        identityRegistry.registerUsersTokens(to, address(this), value);
     }
 
 }

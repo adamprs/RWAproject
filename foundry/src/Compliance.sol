@@ -6,6 +6,7 @@ import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initiali
 import "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "./Interfaces/IIdentityRegistry.sol";
 import "./Interfaces/IRWAToken.sol";
+import "./dataTypes/dataTypes.sol";
 
 contract Compliance is Initializable, OwnableUpgradeable
 {
@@ -13,6 +14,7 @@ contract Compliance is Initializable, OwnableUpgradeable
     IRWAToken public realToken;
     uint256 public maxOwnershipBPS = 1000;
     uint256 maxHolder;
+    uint256 timelock;
 
     event IdentityRegistryUpdated(address indexed newIdentityRegistry);
     event RealTokenUpdated(address indexed newRealToken);
@@ -33,11 +35,12 @@ contract Compliance is Initializable, OwnableUpgradeable
         _disableInitializers();
     }
 
-    function initialize(IIdentityRegistry _identityRegistry, IRWAToken _realToken, uint256 _maxHolder) public initializer {
+    function initialize(IIdentityRegistry _identityRegistry, IRWAToken _realToken, uint256 _maxHolder, uint256 _timelock) public initializer {
         __Ownable_init(msg.sender);
         setIdentityRegistry(_identityRegistry);
         setRealToken(_realToken);
         setNewMaxHolder(_maxHolder);
+        setNewTimelock(_timelock);
     }
 
     function setIdentityRegistry(IIdentityRegistry _identityRegistry) public onlyOwner {
@@ -58,15 +61,72 @@ contract Compliance is Initializable, OwnableUpgradeable
     }
 
     function setNewMaxOwnershipBPS(uint256 newMaxOwnershipBPS) public onlyOwner {
+
         if(newMaxOwnershipBPS > 10000) revert InvalidBPS(newMaxOwnershipBPS);
         if(newMaxOwnershipBPS == 0) revert InvalidBPS(newMaxOwnershipBPS);
-         maxOwnershipBPS = newMaxOwnershipBPS;
+        uint256 oldMaxOwnershipBPS = maxOwnershipBPS;
+        maxOwnershipBPS = newMaxOwnershipBPS;
         emit MaxOwnershipBPSUpdated(newMaxOwnershipBPS);
-        realToken.enforceMaxLimits();
+        if (oldMaxOwnershipBPS > maxOwnershipBPS)
+            realToken.enforceMaxLimits();
     }
 
     function setNewMaxHolder(uint256 _maxHolder) public onlyOwner {
         maxHolder = _maxHolder;
+    }
+
+    function setNewTimelock(uint256 _timelock) public onlyOwner {
+        timelock = _timelock;
+    }
+
+    function tokenTimelock(address _user, address _token, uint256 value) internal returns (bool)
+    {
+        BuyTime [] memory buyTime;
+        IIdentityRegistry _identityRegistry = identityRegistry;
+        buyTime = _identityRegistry.getUsersBuy(_user, _token);
+        uint256 index = _identityRegistry.batchIndex(_user, _token);
+        uint256 count;
+
+        if (value <= buyTime[index].tokenNum && block.timestamp >= buyTime[index].time + timelock)
+        {
+            if (value == buyTime[index].tokenNum)
+            {
+                    index++;
+                    _identityRegistry.setUsersBuyIndex(_user, _token, index);
+                    return true;
+            }
+            else 
+            {
+                _identityRegistry.setUsersBuyTokenNum(_user, _token, index, value);
+                return true;
+            }
+        }
+
+        if (value > buyTime[index].tokenNum && block.timestamp >= buyTime[index].time + timelock)
+        {
+            count = index;
+            while(value > buyTime[count].tokenNum && block.timestamp >= buyTime[index].time + timelock)
+            {
+                value -= buyTime[count].tokenNum;
+                count++;
+            }
+            if (value == buyTime[count].tokenNum)
+            {
+                count++;
+                _identityRegistry.setUsersBuyIndex(_user, _token, count);
+                return true;
+            }
+            else
+            {
+                if(buyTime[count].time - timelock >= 0)
+                    _identityRegistry.setUsersBuyTokenNum(_user, _token, count, value);
+                _identityRegistry.setUsersBuyIndex(_user, _token, count);
+                return true;
+            }
+            return false;
+        }
+
+
     }
 
     function canTransfer(address _sender, address _receiver, uint256 _amount) public view returns (bool) 

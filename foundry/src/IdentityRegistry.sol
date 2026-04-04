@@ -5,6 +5,7 @@ pragma solidity ^0.8.22;
 import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "./dataTypes/dataTypes.sol";
 
 contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
 {
@@ -23,8 +24,14 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
     mapping (address => address []) public userTokens;
     mapping (address => mapping(address => bool)) hasToken;
 
+    mapping (address => mapping(address => BuyTime [])) public usersBuy;
+    mapping (address => mapping(address => uint256)) public batchIndex;
+    
+
     address [] public tokenHolders;
     mapping (address => bool) public isHolder;
+
+
 
     address public treasury;
 
@@ -119,7 +126,19 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
         emit UserWhiteListed(_user);
     }
 
-    function registerUsersTokens(address _user, address _token) internal 
+    function getUsersBuy(address _user, address _token) public returns (BuyTime [] memory) {
+        return usersBuy[_user][_token];
+    }
+
+    function setUsersBuyTokenNum(address _user, address _token, uint256 index, uint256 value) public onlyOwner {
+        usersBuy[_user][_token][index].tokenNum -= value;
+    }
+    
+    function setUsersBuyIndex(address _user, address _token, uint256 newIndex) public onlyOwner {
+        batchIndex[_user][_token] += newIndex;
+    }
+
+    function registerUsersTokens(address _user, address _token, uint256 value) internal 
     {
         if(!hasToken[_user][_token])
         {
@@ -132,6 +151,7 @@ contract IdentityRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable
             tokenHolders.push(_user);
             isHolder[_user] == true;
         }
+        usersBuy[_user][_token].push(BuyTime(value,block.timestamp));
     }
 
     // stocker sur ipfs
